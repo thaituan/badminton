@@ -217,7 +217,7 @@
         }
 
         .result-card ul { list-style: none; padding: 0; margin: 0; position: relative; z-index: 1; }
-        .result-card li {
+        .member-item {
             display: flex;
             align-items: center;
             gap: 10px;
@@ -227,6 +227,14 @@
             background: #ffffff;
             border: 1px solid rgba(148,163,184,0.16);
             color: #0f172a;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.35s ease, transform 0.35s ease;
+        }
+
+        .member-item.visible {
+            opacity: 1;
+            transform: translateY(0);
         }
 
         .result-card li:last-child { margin-bottom: 0; }
@@ -492,6 +500,7 @@
             list.style.paddingInlineStart = '0';
             for (const person of team) {
                 const item = document.createElement('li');
+                item.className = 'member-item';
                 item.innerHTML = `<span class="badge">${person.gender}</span><span class="badge">${person.seed}</span><span>${person.name}</span>`;
                 list.appendChild(item);
             }
@@ -516,6 +525,34 @@
             }
         }
 
+        let revealTimers = [];
+
+        function clearRevealTimers() {
+            revealTimers.forEach(timer => clearTimeout(timer));
+            revealTimers = [];
+        }
+
+        function revealAlternatingTeams(teamAContainer, teamBContainer, delay = 5000) {
+            const itemsA = Array.from(teamAContainer.querySelectorAll('.member-item'));
+            const itemsB = Array.from(teamBContainer.querySelectorAll('.member-item'));
+            const maxLen = Math.max(itemsA.length, itemsB.length);
+
+            for (let i = 0; i < maxLen; i++) {
+                if (i < itemsA.length) {
+                    const timerA = setTimeout(() => {
+                        itemsA[i].classList.add('visible');
+                    }, delay * (i * 2) + 500);
+                    revealTimers.push(timerA);
+                }
+                if (i < itemsB.length) {
+                    const timerB = setTimeout(() => {
+                        itemsB[i].classList.add('visible');
+                    }, delay * (i * 2 + 1) + 500);
+                    revealTimers.push(timerB);
+                }
+            }
+        }
+
         function splitPeople() {
             const people = getPeople();
             if (people.length < 2) {
@@ -535,12 +572,15 @@
                 alert('Không thể chia nhóm.');
                 return;
             }
+            clearRevealTimers();
             teamAEl.innerHTML = '';
             teamBEl.innerHTML = '';
             teamAEl.appendChild(renderGroup('Đội A', result.teamA, result.totals, 'team-a'));
             teamBEl.appendChild(renderGroup('Đội B', result.teamB, result.totals, 'team-b'));
             renderSummary(result.teamA, result.teamB, result.totals);
             outputCard.style.display = 'block';
+            outputCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            revealAlternatingTeams(teamAEl, teamBEl, 5000);
         }
 
         document.querySelector('#addPersonBtn').addEventListener('click', () => createPersonRow());
