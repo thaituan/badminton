@@ -282,6 +282,84 @@
 
         .warning { color: #b45309; font-weight: 700; }
         .small { font-size: 0.95rem; color: var(--muted); }
+
+        @media (max-width: 1024px) {
+            .card {
+                padding: 24px;
+            }
+
+            .result-grid {
+                gap: 20px;
+            }
+        }
+
+        @media (max-width: 820px) {
+            body { background-position: center top; }
+
+            .card {
+                margin: 20px 16px;
+                padding: 22px;
+            }
+
+            .flex-row {
+                flex-direction: column;
+            }
+
+            button#splitBtn {
+                max-width: 100%;
+            }
+
+            .result-grid {
+                grid-template-columns: 1fr;
+            }
+
+            table {
+                display: block;
+                overflow-x: auto;
+                white-space: nowrap;
+            }
+
+            th, td {
+                min-width: 140px;
+            }
+        }
+
+        @media (max-width: 620px) {
+            .card {
+                margin: 16px 12px;
+                padding: 20px;
+                border-radius: 24px;
+            }
+
+            .hero svg {
+                width: 100px;
+                height: 66px;
+            }
+
+            h1 {
+                font-size: clamp(1.8rem, 6vw, 2.4rem);
+            }
+
+            .result-card {
+                padding: 20px;
+            }
+
+            .member-item {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 8px;
+            }
+
+            .badge {
+                padding: 5px 12px;
+                font-size: 0.75rem;
+            }
+
+            .team-pill {
+                font-size: 0.85rem;
+                padding: 7px 12px;
+            }
+        }
     </style>
 </head>
 <body>
