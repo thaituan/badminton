@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>chia bảng nhóm cầu lông: Lên trình thì đổi tên</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 24px; 
+            background: url('background.jpg') center bottom/cover fixed;
+            background-color: #f2f4f8;
+            color: #20232a;
+        }
+        h1, h2 { margin-bottom: 8px; }
+        .card { background: rgba(255, 255, 255, 0.85); border-radius: 12px; box-shadow: 0 4px 18px rgba(0,0,0,.08); padding: 20px; margin-bottom: 20px; }
+        label { display: block; margin-bottom: 4px; font-weight: 600; }
+        input[type=text], select { width: 100%; padding: 10px 12px; margin-bottom: 12px; border: 1px solid #d1d8e0; border-radius: 8px; }
+        button { background: #1f78d1; color: white; border: 0; border-radius: 8px; padding: 12px 18px; cursor: pointer; font-weight: 700; }
+        button.secondary { background: #6b7280; }
+        table { width: 100%; border-collapse: collapse; margin-top: 12px; table-layout: fixed; }
+        th, td { padding: 10px 8px; border-bottom: 1px solid #e5e7eb; text-align: left; vertical-align: top; }
+        td:first-child { width: 45%; }
+        td:nth-child(2), td:nth-child(3) { width: 20%; }
+        td:last-child { width: 15%; }
+        td input, td select { width: 100%; box-sizing: border-box; }
+        .hero { display:flex; justify-content:center; margin-bottom: 18px; }
+        .hero svg { width: 120px; height: 80px; }
+        .result-grid { display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
+        .badge { display: inline-flex; align-items:center; padding: 2px 8px; border-radius: 999px; background: #e5e7eb; font-size: 12px; margin-right: 6px; }
+        .warning { color: #b45309; }
+        .summary { margin-top: 12px; }
+        .flex-row { display:flex; gap:12px; flex-wrap:wrap; }
+        .flex-row > * { flex: 1; min-width: 160px; }
+        .small { font-size: 0.92rem; color: #4b5563; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Chia bảng giải cầu lông nội bộ
+            CLB - Lên trình thì đổi tên</h1>
+        <p class="small">Nhập tên và thuộc tính của mỗi người, sau đó bấm <strong>Chia nhóm</strong>. Hệ thống sẽ cố gắng cân bằng số lượng nam/nữ và hạt giống/thường giữa 2 đội.</p>
+        <div class="flex-row">
+            <button id="addPersonBtn">Thêm người mới</button>
+            <button class="secondary" id="clearBtn">Xóa hết</button>
+            <button class="secondary" id="sampleBtn">Mẫu nhanh</button>
+        </div>
+        <table id="peopleTable">
+            <thead>
+                <tr>
+                    <th>Tên</th>
+                    <th>Giới tính</th>
+                    <th>Hạt giống</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+        <button style="margin-top: 16px;" id="splitBtn">Chia nhóm</button>
+    </div>
+
+    <div class="card" id="outputCard" style="display:none;">
+        <h2>Kết quả</h2>
+        <div class="summary" id="summary"></div>
+        <div class="result-grid">
+            <div>
+                <h3>Nhóm A</h3>
+                <div id="teamA"></div>
+            </div>
+            <div>
+                <h3>Nhóm B</h3>
+                <div id="teamB"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const peopleTable = document.querySelector('#peopleTable tbody');
+        const outputCard = document.querySelector('#outputCard');
+        const summaryEl = document.querySelector('#summary');
+        const teamAEl = document.querySelector('#teamA');
+        const teamBEl = document.querySelector('#teamB');
+
+        const categories = {
+            gender: ['Nam', 'Nữ'],
+            seed: ['Hạt giống', 'Thường']
+        };
+
+        function createPersonRow(name = '', gender = 'Nam', seed = 'Hạt giống') {
+            const tr = document.createElement('tr');
+
+            const nameTd = document.createElement('td');
+            const nameInput = document.createElement('input');
+            nameInput.type = 'text';
+            nameInput.value = name;
+            nameInput.placeholder = 'Tên';
+            nameTd.appendChild(nameInput);
+
+            const genderTd = document.createElement('td');
+            const genderSelect = document.createElement('select');
+            categories.gender.forEach(value => {
+                const option = document.createElement('option');
+                option.value = value;
+                option.textContent = value;
+                if (value === gender) option.selected = true;
+                genderSelect.appendChild(option);
+            });
+            genderTd.appendChild(genderSelect);
+
+            const seedTd = document.createElement('td');
+            const seedSelect = document.createElement('select');
+            categories.seed.forEach(value => {
+                const option = document.createElement('option');
+                option.value = value;
+                option.textContent = value;
+                if (value === seed) option.selected = true;
+                seedSelect.appendChild(option);
+            });
+            seedTd.appendChild(seedSelect);
+
+            const removeTd = document.createElement('td');
+            const removeBtn = document.createElement('button');
+            removeBtn.textContent = 'Xóa';
+            removeBtn.type = 'button';
+            removeBtn.style.background = '#dc2626';
+            removeBtn.onclick = () => tr.remove();
+            removeTd.appendChild(removeBtn);
+
+            tr.appendChild(nameTd);
+            tr.appendChild(genderTd);
+            tr.appendChild(seedTd);
+            tr.appendChild(removeTd);
+
+            peopleTable.appendChild(tr);
+        }
+
+        function getPeople() {
+            return Array.from(peopleTable.querySelectorAll('tr')).map(row => {
+                const inputs = row.querySelectorAll('input, select');
+                return {
+                    name: inputs[0].value.trim() || 'Không tên',
+                    gender: inputs[1].value,
+                    seed: inputs[2].value
+                };
+            }).filter(p => p.name.length > 0);
+        }
+
+        function randomChoice(array) {
+            return array[Math.floor(Math.random() * array.length)];
+        }
+
+        function buildCounts(list) {
+            return list.reduce((acc, item) => {
+                acc.total += 1;
+                acc.gender[item.gender] = (acc.gender[item.gender] || 0) + 1;
+                acc.seed[item.seed] = (acc.seed[item.seed] || 0) + 1;
+                return acc;
+            }, { total: 0, gender: {}, seed: {} });
+        }
+
+        function scoreAssignment(teamA, teamB, totals) {
+            const teamACounts = buildCounts(teamA);
+            const teamBCounts = buildCounts(teamB);
+            const targets = {
+                teamSize: Math.floor(totals.total / 2),
+                gender: {},
+                seed: {}
+            };
+            for (const g of categories.gender) {
+                targets.gender[g] = Math.round((totals.gender[g] || 0) / 2);
+            }
+            for (const s of categories.seed) {
+                targets.seed[s] = Math.round((totals.seed[s] || 0) / 2);
+            }
+
+            let score = 0;
+            score += Math.abs(teamACounts.total - targets.teamSize);
+            for (const g of categories.gender) {
+                score += Math.abs((teamACounts.gender[g] || 0) - targets.gender[g]);
+            }
+            for (const s of categories.seed) {
+                score += Math.abs((teamACounts.seed[s] || 0) - targets.seed[s]);
+            }
+            score += Math.abs(teamACounts.total - teamBCounts.total) * 2;
+            return score;
+        }
+
+        function generateBestSplit(people) {
+            const totals = buildCounts(people);
+            let best = null;
+            let bestScore = Infinity;
+            const iterations = 5000;
+
+            for (let i = 0; i < iterations; i++) {
+                const shuffled = [...people].sort(() => Math.random() - 0.5);
+                const teamA = [];
+                const teamB = [];
+                for (const person of shuffled) {
+                    const teamScores = [
+                        scoreAssignment([...teamA, person], teamB, totals),
+                        scoreAssignment(teamA, [...teamB, person], totals)
+                    ];
+                    if (teamScores[0] < teamScores[1]) {
+                        teamA.push(person);
+                    } else if (teamScores[1] < teamScores[0]) {
+                        teamB.push(person);
+                    } else {
+                        if (teamA.length <= teamB.length) teamA.push(person);
+                        else teamB.push(person);
+                    }
+                }
+                const score = scoreAssignment(teamA, teamB, totals);
+                if (score < bestScore) {
+                    bestScore = score;
+                    best = { teamA, teamB, totals };
+                    if (score === 0) break;
+                }
+            }
+            return best;
+        }
+
+        function renderGroup(title, team, totals) {
+            const wrapper = document.createElement('div');
+            const heading = document.createElement('div');
+            heading.innerHTML = `<strong>${title} (${team.length})</strong>`;
+            wrapper.appendChild(heading);
+            const counts = buildCounts(team);
+            const countInfo = document.createElement('div');
+            countInfo.className = 'small';
+            countInfo.innerHTML = `Nam: ${counts.gender['Nam'] || 0}, Nữ: ${counts.gender['Nữ'] || 0}, Hạt giống: ${counts.seed['Hạt giống'] || 0}, Thường: ${counts.seed['Thường'] || 0}`;
+            wrapper.appendChild(countInfo);
+            const list = document.createElement('ul');
+            list.style.paddingInlineStart = '18px';
+            for (const person of team) {
+                const item = document.createElement('li');
+                item.innerHTML = `<span class="badge">${person.gender}</span><span class="badge">${person.seed}</span>${person.name}`;
+                list.appendChild(item);
+            }
+            wrapper.appendChild(list);
+            return wrapper;
+        }
+
+        function renderSummary(teamA, teamB, totals) {
+            const diff = buildCounts(teamA);
+            const diffB = buildCounts(teamB);
+            const lines = [];
+            lines.push(`<strong>Tổng cộng:</strong> ${totals.total} người`);
+            lines.push(`Nhóm A: ${teamA.length}, Nhóm B: ${teamB.length}`);
+            lines.push(`Nam A/B: ${(diff.gender['Nam'] || 0)}/${(diffB.gender['Nam'] || 0)}, Nữ A/B: ${(diff.gender['Nữ'] || 0)}/${(diffB.gender['Nữ'] || 0)}`);
+            lines.push(`Hạt giống A/B: ${(diff.seed['Hạt giống'] || 0)}/${(diffB.seed['Hạt giống'] || 0)}, Thường A/B: ${(diff.seed['Thường'] || 0)}/${(diffB.seed['Thường'] || 0)}`);
+            summaryEl.innerHTML = lines.map(line => `<div>${line}</div>`).join('');
+            if (Math.abs(teamA.length - teamB.length) > 1) {
+                const warning = document.createElement('div');
+                warning.className = 'warning';
+                warning.textContent = 'Kết quả không thể hoàn toàn cân bằng về số lượng do tổng số người là số lẻ hoặc phân phối thuộc tính không đều.';
+                summaryEl.appendChild(warning);
+            }
+        }
+
+        function splitPeople() {
+            const people = getPeople();
+            if (people.length < 2) {
+                alert('Vui lòng nhập ít nhất 2 người.');
+                return;
+            }
+            const result = generateBestSplit(people);
+            if (!result) {
+                alert('Không thể chia nhóm.');
+                return;
+            }
+            teamAEl.innerHTML = '';
+            teamBEl.innerHTML = '';
+            teamAEl.appendChild(renderGroup('Đội A', result.teamA, result.totals));
+            teamBEl.appendChild(renderGroup('Đội B', result.teamB, result.totals));
+            renderSummary(result.teamA, result.teamB, result.totals);
+            outputCard.style.display = 'block';
+        }
+
+        document.querySelector('#addPersonBtn').addEventListener('click', () => createPersonRow());
+        document.querySelector('#clearBtn').addEventListener('click', () => {
+            peopleTable.innerHTML = '';
+            outputCard.style.display = 'none';
+        });
+        document.querySelector('#splitBtn').addEventListener('click', splitPeople);
+        document.querySelector('#sampleBtn').addEventListener('click', () => {
+            peopleTable.innerHTML = '';
+            ['An', 'Bình', 'Cẩm', 'Dũng', 'Emy', 'Hùng', 'Lan', 'Minh', 'Nhung', 'Quân', 'Trang', 'Vân'].forEach((name, index) => {
+                const gender = index % 2 === 0 ? 'Nam' : 'Nữ';
+                const seed = index % 3 === 0 ? 'Hạt giống' : 'Thường';
+                createPersonRow(name, gender, seed);
+            });
+            outputCard.style.display = 'none';
+        });
+
+        createPersonRow('An', 'Nam', 'Hạt giống');
+        createPersonRow('Bình', 'Nam', 'Thường');
+        createPersonRow('Cẩm', 'Nữ', 'Thường');
+    </script>
+</body>
+</html>
