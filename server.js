@@ -20,6 +20,15 @@ function broadcast(data) {
   });
 }
 
+function broadcastToJoined(data) {
+  const message = JSON.stringify(data);
+  wss.clients.forEach(client => {
+    if (client.readyState === client.OPEN && typeof client.viewerName === 'string' && client.viewerName.length > 0) {
+      client.send(message);
+    }
+  });
+}
+
 function getViewerNames() {
   return [...wss.clients]
     .map(client => client.viewerName)
@@ -44,8 +53,8 @@ wss.on('connection', ws => {
     try {
       const data = JSON.parse(message.toString());
       if (data.type === 'splitUpdate') {
-        console.log('Broadcasting split update to', wss.clients.size, 'clients');
-        broadcast({ type: 'splitUpdate', result: data.result });
+        console.log('Broadcasting split update to joined viewers only');
+        broadcastToJoined({ type: 'splitUpdate', result: data.result });
       }
       if (data.type === 'viewerJoin') {
         ws.viewerName = String(data.name || '').trim();

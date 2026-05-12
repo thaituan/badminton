@@ -60,9 +60,46 @@
             backdrop-filter: blur(14px);
         }
 
+        .auth-card {
+            background: rgba(255,255,255,0.94);
+            border: 1px solid rgba(37,99,235,0.18);
+            box-shadow: 0 28px 52px rgba(37,99,235,0.08);
+        }
+
+        .auth-card h3 {
+            margin-bottom: 10px;
+        }
+
+        .auth-card .auth-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
+            align-items: end;
+        }
+
+        .auth-card .auth-grid input {
+            margin-bottom: 0;
+        }
+
+        .auth-card .auth-submit {
+            grid-column: span 2;
+            width: 100%;
+            margin-top: 0;
+        }
+
+        .auth-status {
+            min-height: 1.3rem;
+            margin-top: 12px;
+            color: #0f5132;
+        }
+
+        .auth-status.error {
+            color: #9f3a38;
+        }
+
         label { display: inline-block; margin-bottom: 6px; font-weight: 700; color: var(--muted); }
 
-        input[type=text], select {
+        input[type=text], input[type=password], select {
             width: 100%;
             padding: 14px 16px;
             margin-bottom: 14px;
@@ -73,7 +110,7 @@
             transition: border-color 0.2s ease, box-shadow 0.2s ease;
         }
 
-        input[type=text]:focus, select:focus {
+        input[type=text]:focus, input[type=password]:focus, select:focus {
             outline: none;
             border-color: rgba(37,99,235,0.45);
             box-shadow: 0 0 0 4px rgba(59,130,246,0.12);
@@ -386,13 +423,17 @@
             <h3>Danh sách người xem trực tiếp</h3>
             <div id="viewerList" class="small">Chưa có người xem nào nhập tên.</div>
         </div>
-        <div class="card" id="authCard" style="margin-bottom:16px;">
-            <h3>Xác thực trước khi chia nhóm</h3>
-            <div class="small">Nhập username và password để bật nút Chia nhóm.</div>
-            <input id="authUsernameInput" type="text" placeholder="Username" />
-            <input id="authPasswordInput" type="password" placeholder="Password" />
-            <button id="authLoginBtn" type="button" style="margin-top: 12px; width: 100%; max-width: 240px;">Đăng nhập</button>
-            <div id="authStatus" class="small" style="margin-top: 10px; color: #0f5132; display:none;"></div>
+        <div class="card auth-card" id="authCard">
+            <div class="auth-intro">
+                <h3>Xác thực trước khi chia nhóm</h3>
+                <div class="small">Nhập username và password để bật nút <strong>Chia nhóm</strong>.</div>
+            </div>
+            <div class="auth-grid">
+                <input id="authUsernameInput" type="text" placeholder="Username" />
+                <input id="authPasswordInput" type="password" placeholder="Password" />
+                <button id="authLoginBtn" type="button" class="auth-submit">Đăng nhập</button>
+            </div>
+            <div id="authStatus" class="auth-status small" aria-live="polite"></div>
         </div>
         <div class="flex-row">
             <button id="addPersonBtn">Thêm người mới</button>
@@ -511,7 +552,7 @@
 
         function setAuthStatus(message, success = true) {
             authStatus.textContent = message;
-            authStatus.style.color = success ? '#0f5132' : '#9f3a38';
+            authStatus.classList.toggle('error', !success);
             authStatus.style.display = 'block';
         }
 
