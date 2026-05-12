@@ -729,6 +729,12 @@
             for (const s of categories.seed) {
                 if ((totals.seed[s] || 0) % 2 !== 0) return false;
             }
+            for (const g of categories.gender) {
+                for (const s of categories.seed) {
+                    const key = `${g}|${s}`;
+                    if ((totals.combos[key] || 0) % 2 !== 0) return false;
+                }
+            }
             return true;
         }
 
@@ -741,8 +747,10 @@
                 acc.total += 1;
                 acc.gender[item.gender] = (acc.gender[item.gender] || 0) + 1;
                 acc.seed[item.seed] = (acc.seed[item.seed] || 0) + 1;
+                const comboKey = `${item.gender}|${item.seed}`;
+                acc.combos[comboKey] = (acc.combos[comboKey] || 0) + 1;
                 return acc;
-            }, { total: 0, gender: {}, seed: {} });
+            }, { total: 0, gender: {}, seed: {}, combos: {} });
         }
 
         function scoreAssignment(teamA, teamB, totals) {
@@ -751,13 +759,20 @@
             const targets = {
                 teamSize: totals.total / 2,
                 gender: {},
-                seed: {}
+                seed: {},
+                combos: {}
             };
             for (const g of categories.gender) {
                 targets.gender[g] = (totals.gender[g] || 0) / 2;
             }
             for (const s of categories.seed) {
                 targets.seed[s] = (totals.seed[s] || 0) / 2;
+            }
+            for (const g of categories.gender) {
+                for (const s of categories.seed) {
+                    const key = `${g}|${s}`;
+                    targets.combos[key] = (totals.combos[key] || 0) / 2;
+                }
             }
 
             let score = 0;
@@ -767,6 +782,12 @@
             }
             for (const s of categories.seed) {
                 score += Math.abs((teamACounts.seed[s] || 0) - targets.seed[s]) * 3;
+            }
+            for (const g of categories.gender) {
+                for (const s of categories.seed) {
+                    const key = `${g}|${s}`;
+                    score += Math.abs((teamACounts.combos[key] || 0) - targets.combos[key]) * 5;
+                }
             }
             score += Math.abs(teamACounts.total - teamBCounts.total) * 4;
             return score;
