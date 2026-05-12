@@ -367,6 +367,33 @@
         <h1>Chia bảng giải cầu lông nội bộ
             CLB - Lên trình thì đổi tên</h1>
         <p class="small">Nhập tên và thuộc tính của mỗi người, sau đó bấm <strong>Chia nhóm</strong>. Hệ thống sẽ cố gắng cân bằng số lượng nam/nữ và hạt giống/thường giữa 2 đội.</p>
+        <div class="flex-row" id="liveControls" style="gap:12px; align-items:center;">
+            <div class="small" id="viewerLinkWrap">Link xem trực tiếp: <code id="viewerUrl" style="word-break: break-all;"></code></div>
+            <div class="small">Trạng thái: <strong id="socketStatus">Đang kết nối...</strong></div>
+            <div class="small">Người xem: <strong id="viewerCount">0</strong></div>
+        </div>
+        <div id="viewerNote" class="summary" style="display:none; margin-bottom: 16px;">
+            <strong>Chế độ xem trực tiếp</strong><br>
+            Đây là trang xem trực tiếp. Mở link bên trên trong một tab khác để người xem theo dõi kết quả mỗi khi bạn bấm "Chia nhóm".
+        </div>
+        <div class="card" id="viewerJoinCard" style="display:none; margin-bottom: 16px;">
+            <h3>Nhập tên để xem trực tiếp</h3>
+            <div class="small">Vui lòng nhập tên để tham gia danh sách người xem và nhận cập nhật live.</div>
+            <input id="viewerNameInput" type="text" placeholder="Tên của bạn" />
+            <button id="viewerNameBtn" type="button" style="margin-top: 12px; width: 100%; max-width: 240px;">Tham gia</button>
+        </div>
+        <div class="card" id="viewerListCard" style="display:none; margin-bottom: 16px;">
+            <h3>Danh sách người xem trực tiếp</h3>
+            <div id="viewerList" class="small">Chưa có người xem nào nhập tên.</div>
+        </div>
+        <div class="card" id="authCard" style="margin-bottom:16px;">
+            <h3>Xác thực trước khi chia nhóm</h3>
+            <div class="small">Nhập username và password để bật nút Chia nhóm.</div>
+            <input id="authUsernameInput" type="text" placeholder="Username" />
+            <input id="authPasswordInput" type="password" placeholder="Password" />
+            <button id="authLoginBtn" type="button" style="margin-top: 12px; width: 100%; max-width: 240px;">Đăng nhập</button>
+            <div id="authStatus" class="small" style="margin-top: 10px; color: #0f5132; display:none;"></div>
+        </div>
         <div class="flex-row">
             <button id="addPersonBtn">Thêm người mới</button>
             <button class="secondary" id="clearBtn">Xóa hết</button>
@@ -407,13 +434,192 @@
         const summaryEl = document.querySelector('#summary');
         const teamAEl = document.querySelector('#teamA');
         const teamBEl = document.querySelector('#teamB');
+        const socketStatus = document.querySelector('#socketStatus');
+        const viewerCountEl = document.querySelector('#viewerCount');
+        const viewerUrlEl = document.querySelector('#viewerUrl');
+        const viewerLinkWrap = document.querySelector('#viewerLinkWrap');
+        const viewerNote = document.querySelector('#viewerNote');
+        const viewerJoinCard = document.querySelector('#viewerJoinCard');
+        const viewerNameInput = document.querySelector('#viewerNameInput');
+        const viewerNameBtn = document.querySelector('#viewerNameBtn');
+        const viewerListCard = document.querySelector('#viewerListCard');
+        const viewerListEl = document.querySelector('#viewerList');
+        const authCard = document.querySelector('#authCard');
+        const authUsernameInput = document.querySelector('#authUsernameInput');
+        const authPasswordInput = document.querySelector('#authPasswordInput');
+        const authLoginBtn = document.querySelector('#authLoginBtn');
+        const authStatus = document.querySelector('#authStatus');
+        const viewerMode = new URLSearchParams(location.search).get('viewer') === '1';
+        const wsProtocol = location.protocol === 'https:' ? 'wss' : 'ws';
+        const socket = new WebSocket(`${wsProtocol}://${location.host}/live`);
+        if (!viewerMode) {
+            document.querySelector('#splitBtn').disabled = true;
+        }
 
         const categories = {
             gender: ['Nam', 'Nữ'],
             seed: ['Hạt giống', 'Thường']
         };
 
-        const defaultNames = ['Tuấn', 'Thìn', 'Uy', 'Trâm', 'Trinh', 'Trang', 'Ngọc', 'Hoài', 'Đức', 'Hoàng', 'Kiên', 'Quyên'];
+        const samplePeople = [
+            { name: 'Tuấn', gender: 'Nam', seed: 'Thường' },
+            { name: 'Thìn', gender: 'Nam', seed: 'Hạt giống' },
+            { name: 'Uy', gender: 'Nam', seed: 'Thường' },
+            { name: 'Trâm', gender: 'Nữ', seed: 'Thường' },
+            { name: 'Trinh', gender: 'Nữ', seed: 'Hạt giống' },
+            { name: 'Trang', gender: 'Nữ', seed: 'Thường' },
+            { name: 'Ngọc', gender: 'Nữ', seed: 'Hạt giống' },
+            { name: 'Hoài', gender: 'Nữ', seed: 'Thường' },
+            { name: 'Đức', gender: 'Nam', seed: 'Thường' },
+            { name: 'Hoàng', gender: 'Nam', seed: 'Thường' },
+            { name: 'Kiên', gender: 'Nam', seed: 'Hạt giống' },
+            { name: 'Quyên', gender: 'Nữ', seed: 'Thường' },
+            { name: 'Phi', gender: 'Nam', seed: 'Hạt giống' },
+            { name: 'Vinh', gender: 'Nam', seed: 'Hạt giống' },
+            { name: 'Nguyên', gender: 'Nữ', seed: 'Thường' },
+            { name: 'Hồng Anh', gender: 'Nữ', seed: 'Thường' }
+        ];
+
+        function updateViewerUrl() {
+            const liveUrl = `${location.origin}${location.pathname}?viewer=1`;
+            viewerUrlEl.textContent = liveUrl;
+            viewerLinkWrap.style.display = viewerMode ? 'none' : 'block';
+        }
+
+        let loggedIn = false;
+        const AUTH_USERNAME = 'tuan';
+        const AUTH_PASSWORD = 'tuan123';
+
+        function setViewerModeUI() {
+            if (!viewerMode) return;
+            document.querySelector('#addPersonBtn').style.display = 'none';
+            document.querySelector('#clearBtn').style.display = 'none';
+            document.querySelector('#sampleBtn').style.display = 'none';
+            document.querySelector('#splitBtn').style.display = 'none';
+            document.querySelector('#peopleTable').style.display = 'none';
+            viewerNote.style.display = 'block';
+            viewerJoinCard.style.display = 'block';
+            viewerListCard.style.display = 'block';
+            if (authCard) authCard.style.display = 'none';
+        }
+
+        function broadcastSplit(result) {
+            if (socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({ type: 'splitUpdate', result }));
+            }
+        }
+
+        function setAuthStatus(message, success = true) {
+            authStatus.textContent = message;
+            authStatus.style.color = success ? '#0f5132' : '#9f3a38';
+            authStatus.style.display = 'block';
+        }
+
+        function handleAuth() {
+            const username = authUsernameInput.value.trim();
+            const password = authPasswordInput.value.trim();
+            if (username === AUTH_USERNAME && password === AUTH_PASSWORD) {
+                loggedIn = true;
+                authUsernameInput.disabled = true;
+                authPasswordInput.disabled = true;
+                authLoginBtn.disabled = true;
+                document.querySelector('#splitBtn').disabled = false;
+                setAuthStatus('Đăng nhập thành công. Bạn có thể chia nhóm bây giờ.', true);
+                return;
+            }
+            setAuthStatus('Username hoặc password không đúng.', false);
+        }
+
+        function updateViewerList(viewers) {
+            if (!viewerListEl) return;
+            if (!viewers || viewers.length === 0) {
+                viewerListEl.innerHTML = '<div class="small">Chưa có người xem nào nhập tên.</div>';
+                return;
+            }
+            viewerListEl.innerHTML = viewers.map(name => `<div class="small">• ${name}</div>`).join('');
+        }
+
+        function joinLiveView(name) {
+            const trimmed = String(name || '').trim();
+            if (trimmed.length < 2) {
+                alert('Vui lòng nhập tên để tham gia xem trực tiếp.');
+                return;
+            }
+            if (socket.readyState !== WebSocket.OPEN) {
+                alert('Kết nối đang bị gián đoạn, hãy thử lại sau.');
+                return;
+            }
+            socket.send(JSON.stringify({ type: 'viewerJoin', name: trimmed }));
+            viewerJoinCard.style.display = 'none';
+            viewerNote.innerHTML = `<strong>Xin chào ${trimmed}</strong><br>Bạn đang xem trực tiếp. Chờ kết quả từ người chia nhóm.`;
+            viewerNote.style.display = 'block';
+        }
+
+        function handleIncomingSplit(result) {
+            if (!result) return;
+            clearRevealTimers();
+            teamAEl.innerHTML = '';
+            teamBEl.innerHTML = '';
+            teamAEl.appendChild(renderGroup('Đội A', result.teamA, result.totals, 'team-a'));
+            teamBEl.appendChild(renderGroup('Đội B', result.teamB, result.totals, 'team-b'));
+            renderSummary(result.teamA, result.teamB, result.totals);
+            outputCard.style.display = 'block';
+            outputCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            revealAlternatingTeams(teamAEl, teamBEl, 5000);
+        }
+
+        socket.addEventListener('open', () => {
+            socketStatus.textContent = 'Đã kết nối';
+            updateViewerUrl();
+            if (viewerMode) {
+                setViewerModeUI();
+            } else {
+                viewerListCard.style.display = 'block';
+            }
+            if (!viewerMode) {
+                document.querySelector('#splitBtn').disabled = true;
+            }
+        });
+
+        socket.addEventListener('close', () => {
+            socketStatus.textContent = 'Mất kết nối';
+        });
+
+        socket.addEventListener('error', () => {
+            socketStatus.textContent = 'Lỗi kết nối';
+        });
+
+        socket.addEventListener('message', event => {
+            try {
+                const data = JSON.parse(event.data);
+                if (data.type === 'viewerCount') {
+                    viewerCountEl.textContent = data.count;
+                }
+                if (data.type === 'viewerList') {
+                    updateViewerList(data.viewers);
+                }
+                if (data.type === 'splitUpdate') {
+                    handleIncomingSplit(data.result);
+                }
+            } catch (err) {
+                console.error('Không thể đọc message WebSocket', err);
+            }
+        });
+
+        viewerNameBtn.addEventListener('click', () => joinLiveView(viewerNameInput.value));
+        viewerNameInput.addEventListener('keydown', event => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                joinLiveView(viewerNameInput.value);
+            }
+        });
+        authLoginBtn.addEventListener('click', handleAuth);
+        authPasswordInput.addEventListener('keydown', event => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                handleAuth();
+            }
+        });
 
         function createPersonRow(name = '', gender = 'Nam', seed = 'Hạt giống') {
             const tr = document.createElement('tr');
@@ -632,6 +838,10 @@
         }
 
         function splitPeople() {
+            if (!loggedIn) {
+                alert('Vui lòng đăng nhập username và password trước khi chia nhóm.');
+                return;
+            }
             const people = getPeople();
             if (people.length < 2) {
                 alert('Vui lòng nhập ít nhất 2 người.');
@@ -658,6 +868,7 @@
             renderSummary(result.teamA, result.teamB, result.totals);
             outputCard.style.display = 'block';
             outputCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            broadcastSplit(result);
             revealAlternatingTeams(teamAEl, teamBEl, 5000);
         }
 
@@ -669,17 +880,22 @@
         document.querySelector('#splitBtn').addEventListener('click', splitPeople);
         document.querySelector('#sampleBtn').addEventListener('click', () => {
             peopleTable.innerHTML = '';
-            defaultNames.forEach((name, index) => {
-                const gender = index % 2 === 0 ? 'Nam' : 'Nữ';
-                const seed = index % 3 === 0 ? 'Hạt giống' : 'Thường';
-                createPersonRow(name, gender, seed);
+            samplePeople.forEach(person => {
+                createPersonRow(person.name, person.gender, person.seed);
             });
             outputCard.style.display = 'none';
         });
 
-        createPersonRow(defaultNames[0], 'Nam', 'Hạt giống');
-        createPersonRow(defaultNames[1], 'Nam', 'Thường');
-        createPersonRow(defaultNames[2], 'Nữ', 'Thường');
+        if (!viewerMode) {
+            samplePeople.forEach(person => {
+                createPersonRow(person.name, person.gender, person.seed);
+            });
+        }
+
+        updateViewerUrl();
+        if (viewerMode) {
+            setViewerModeUI();
+        }
     </script>
 </body>
 </html>

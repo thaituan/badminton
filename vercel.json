@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "builds": [
+    { "src": "group-splitter.html", "use": "@vercel/static" },
+    { "src": "index.html", "use": "@vercel/static" }
+  ],
+  "routes": [
+    { "src": "/(.*)", "dest": "/group-splitter.html" }
+  ]
+}
